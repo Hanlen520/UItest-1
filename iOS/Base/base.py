@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from iOS import script_ultils as sc
+from iOS.Base import script_ultils as sc, iOS_elements
 import time
 from selenium.common.exceptions import TimeoutException,NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
-from iOS import iOS_elements
 from appium.webdriver.common.touch_action import TouchAction
 import random
 
@@ -22,7 +21,7 @@ def home_enter():
     sc.logger.info('下拉刷新')
     start_x = width // 2
     start_bottom = height // 2
-    sc.swipe_by_ratio(start_x, start_bottom, 'down', 0.3, 300)
+    sc.swipe_by_ratio(start_x, start_bottom, 'down', 0.3, 500)
 
 def find_element_click(method, timeout, el, duration = 1):
     '''
@@ -140,9 +139,10 @@ def gallery_clip_op():
     WebDriverWait(sc.driver, 5, 1).until(
         lambda el: el.find_element_by_name(iOS_elements.el_gallery_cho)).click()
 
-    sc.logger.info('旋转')
-    WebDriverWait(sc.driver, 5, 1).until(
-        lambda el: el.find_element_by_name(iOS_elements.btn_gallery_rotate)).click()
+    sc.logger.info('旋转180度')
+    for i in range(2):
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda el: el.find_element_by_name(iOS_elements.btn_gallery_rotate)).click()
 
     try:
         sc.logger.info('点击播放按钮')
@@ -323,8 +323,13 @@ def material_manager(type, btn_del):
     :param btn_del: 删除按钮
     :return:
     '''
+
+    sc.logger.info('下拉刷新')
+    refresh('down', 0.3, 500, 1)
+
     sc.logger.info('点击管理按钮')
-    sc.driver.find_element_by_name(iOS_elements.btn_manager).click()
+    WebDriverWait(sc.driver, 10, 1).until(
+        lambda x: x.find_element_by_xpath(iOS_elements.btn_manager)).click()
 
     btn_del = sc.driver.find_element_by_name(btn_del)
     btn_del.click()
@@ -344,7 +349,7 @@ def material_manager(type, btn_del):
 
 def material_used(btn_download):
     sc.logger.info('下拉刷新')
-    refresh('down', 0.3, 300, 1)
+    refresh('down', 0.3, 500, 1)
 
     try:
         sc.logger.info('点击"使用"')
@@ -352,6 +357,7 @@ def material_used(btn_download):
             lambda x: x.find_element_by_name("使用")).click()
     except TimeoutException:
         sc.logger.info('该素材尚未下载，下载后再"使用"')
+        time.sleep(1)
         WebDriverWait(sc.driver, 5, 1).until(
             lambda x: x.find_element_by_name(btn_download)).click()
 
@@ -375,12 +381,12 @@ def refresh(direct, ratio, duration, times = 1):
         for i in range(times):
             sc.logger.info('第 %d 次下拉刷新', i)
             sc.swipe_by_ratio(start_x, start_y, 'down', ratio, duration)
-            time.sleep(.300)
+            time.sleep(.500)
     elif direct == 'up':
         for i in range(times):
             sc.logger.info('第 %d 次上滑动', i)
             sc.swipe_by_ratio(start_x, start_bottom, 'up', ratio, duration)
-            time.sleep(.300)
+            time.sleep(.500)
 
 def music_add():
     '''配乐下载并添加'''
@@ -393,8 +399,12 @@ def music_add():
         sc.logger.info('当前页面已无未下载音频')
 
     sc.logger.info('选择一首音频试听')
-    WebDriverWait(sc.driver, 10, 1).until(
-        lambda x: x.find_element_by_xpath(iOS_elements.el_mus_play)).click()
+    try:
+        WebDriverWait(sc.driver, 10, 1).until(
+            lambda x: x.find_element_by_xpath(iOS_elements.el_mus_title1)).click()
+    except:
+        WebDriverWait(sc.driver, 10, 1).until(
+            lambda x: x.find_element_by_xpath(iOS_elements.el_mus_title2)).click()
 
     sc.logger.info('点击“添加”按钮')
     sc.driver.find_element_by_name('添加').click()
@@ -405,7 +415,7 @@ def preview_music():
     try:
         sc.driver.find_element_by_name("添加配乐").click()
     except NoSuchElementException:
-        sc.driver.find_element_by_name("更改配乐").click()
+        sc.driver.find_element_by_name("更换配乐").click()
 
     try:
         sc.logger.info('删除配乐')
@@ -450,33 +460,81 @@ def back_to_home():
     WebDriverWait(sc.driver, 5, 1).until(
         lambda el: el.find_element_by_name("存草稿")).click()
 
+    try:
+        WebDriverWait(sc.driver, 10, 1).until(
+            lambda el: el.find_element_by_xpath('//XCUIElementTypeButton[@name="1"]')).click()
+    except TimeoutException:
+        sc.logger.info('返回首页后，无广告弹出')
+
     sc.logger.info('返回创作页')
-    WebDriverWait(sc.driver, 10, 1).until(
-        lambda el: el.find_element_by_xpath(iOS_elements.el_studio_back)).click()
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda el: el.find_element_by_xpath(iOS_elements.el_studio_back)).click()
+    except TimeoutException:
+        sc.logger.info('因广告原因跳出app了，重新启动app')
+        sc.driver.launch_app()
 
 def clip_fun_loop():
     """剪辑-镜头编辑-功能遍历."""
-    video_flag = 0
-
     sc.logger.info('点击“镜头编辑”')
     WebDriverWait(sc.driver, 5, 1).until(
         lambda x: x.find_element_by_name("镜头编辑")).click()
 
-    sc.logger.info('剪辑-镜头编辑-滤镜')
+    video_flag = 0
+
+    sc.logger.info('镜头编辑-滤镜')
     WebDriverWait(sc.driver, 5, 1).until(
         lambda x: x.find_element_by_name("滤镜")).click()
+
+    sc.logger.info('下载更多')
+    try:
+        sc.driver.find_element_by_name('下载更多').click()
+    except NoSuchElementException:
+        sc.logger.info('右滑一些，再选择下载更多')
+        el_fliter = sc.driver.find_element_by_name("缓流")
+        coord_x = el_fliter.location.get('x')
+        coord_y = el_fliter.location.get('y')
+        sc.swipe_by_ratio(coord_x, coord_y, 'right', 0.5, 500)
+
+        sc.driver.find_element_by_name('下载更多').click()
+
+    sc.logger.info('下拉刷新')
+    refresh('down', 0.3, 500, 1)
+
+    sc.logger.info('下载并使用滤镜')
+    while True:
+        try:
+            sc.driver.find_element_by_name(iOS_elements.el_store_download2).click()
+            break
+        except NoSuchElementException:
+            sc.logger.info('当前页面已无未下载主题')
+
+    sc.logger.info('使用滤镜')
+    WebDriverWait(sc.driver, 20, 1).until(
+        lambda x: x.find_element_by_name("使用")).click()
+
+    WebDriverWait(sc.driver, 5, 1).until(
+        lambda x: x.find_element_by_name("应用于全部镜头")).click()
 
     sc.logger.info('点击“确认”')
     sc.driver.find_element_by_name(iOS_elements.el_confirm_btn).click()
 
-    sc.logger.info('剪辑-镜头编辑-比例')
+    sc.logger.info('镜头编辑-比例')
     WebDriverWait(sc.driver, 5, 1).until(
-        lambda x: x.find_element_by_name("比例")).click()
+        lambda x: x.find_element_by_name("比例和背景")).click()
 
-    sc.logger.info('点击“取消”')
-    sc.driver.find_element_by_name(iOS_elements.el_cancel_btn).click()
+    sc.logger.info('切换到"比例tab"')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name(iOS_elements.btn_bg_pro)).click()
+    except TimeoutException:
+        sc.logger.info('已经在"比例tab"')
 
-    sc.logger.info('剪辑-镜头编辑-图片时长')
+    sc.logger.info('剪辑-切换1:1比例')
+    el_proportion = "vivavideo_edit_icon_proportion_1_1"
+    clip_proportion(el_proportion)
+
+    sc.logger.info('镜头编辑-图片时长')
     try:
         sc.logger.info('点击“图片时长”')
         WebDriverWait(sc.driver, 3, 1).until(
@@ -488,16 +546,24 @@ def clip_fun_loop():
         video_flag = 1
         sc.logger.info('当前镜头是视频，不支持时长')
 
-    sc.logger.info('剪辑-镜头编辑-修剪')
+    sc.logger.info('镜头编辑-修剪')
     if video_flag == 1:
         sc.logger.info('点击“修剪”')
         WebDriverWait(sc.driver, 5, 1).until(
             lambda x: x.find_element_by_name("修剪")).click()
 
+        sc.logger.info('点击“剪除”')
+        try:
+            WebDriverWait(sc.driver, 5, 1).until(
+                lambda x: x.find_element_by_name("剪中间")).click()
+        except TimeoutException:
+            WebDriverWait(sc.driver, 5, 1).until(
+                lambda x: x.find_element_by_name("剪除")).click()
+
         sc.logger.info('点击“确认”')
         sc.driver.find_element_by_name(iOS_elements.el_confirm_btn).click()
 
-    sc.logger.info('剪辑-镜头编辑-分割')
+    sc.logger.info('镜头编辑-分割')
     if video_flag == 1:
         sc.logger.info('点击“分割”')
         WebDriverWait(sc.driver, 5, 1).until(
@@ -513,9 +579,9 @@ def clip_fun_loop():
     el_copy = sc.driver.find_element_by_name("复制")
     coord_x = el_copy.location.get('x')
     coord_y = el_copy.location.get('y')
-    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.7, 300)
+    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.5, 500)
 
-    sc.logger.info('剪辑-镜头编辑-变速')
+    sc.logger.info('镜头编辑-变速')
     if video_flag == 1:
         sc.logger.info('点击"变速"')
         WebDriverWait(sc.driver, 5, 1).until(
@@ -527,7 +593,7 @@ def clip_fun_loop():
         sc.logger.info('点击“确认”')
         sc.driver.find_element_by_name(iOS_elements.el_confirm_btn).click()
 
-    sc.logger.info('剪辑-镜头编辑-调色')
+    sc.logger.info('镜头编辑-调色')
     sc.logger.info('点击“调色”')
     WebDriverWait(sc.driver, 5, 1).until(
         lambda x: x.find_element_by_name("调色")).click()
@@ -539,9 +605,9 @@ def clip_fun_loop():
     el_adjuest = sc.driver.find_element_by_name("调色")
     coord_x = el_adjuest.location.get('x')
     coord_y = el_adjuest.location.get('y')
-    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.7, 300)
+    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.5, 500)
 
-    sc.logger.info('剪辑-镜头编辑-镜头倒放')
+    sc.logger.info('镜头编辑-镜头倒放')
     if video_flag == 1:
         clip_reverse()
 
@@ -553,17 +619,44 @@ def clip_fun_loop():
     el_mute = sc.driver.find_element_by_name("静音")
     coord_x = el_mute.location.get('x')
     coord_y = el_mute.location.get('y')
-    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.7, 300)
+    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.5, 500)
 
-    sc.logger.info('剪辑-镜头编辑-旋转')
+    sc.logger.info('镜头编辑-旋转')
     sc.logger.info('点击“旋转”')
     WebDriverWait(sc.driver, 5, 1).until(
         lambda x: x.find_element_by_name("旋转")).click()
 
-    sc.logger.info('剪辑-镜头编辑-转场')
+    sc.logger.info('镜头编辑-转场')
     sc.logger.info('点击“转场”')
     WebDriverWait(sc.driver, 5, 1).until(
         lambda x: x.find_element_by_name("转场")).click()
+
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name("应用于全部镜头")).click()
+    except TimeoutException:
+        sc.logger.info('只有一个镜头，无法添加转场')
+        return True
+
+    sc.logger.info('下载更多')
+    more_download('下载更多')
+
+    sc.logger.info('选择一个"转场"使用')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_xpath(iOS_elements.btn_transition_cho)).click()
+    except TimeoutException:
+        sc.logger.info('选择一个"转场"下载')
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name(iOS_elements.btn_transition_download)).click()
+
+        sc.logger.info('使用')
+        WebDriverWait(sc.driver, 10, 1).until(
+            lambda x: x.find_element_by_xpath(iOS_elements.btn_transition_cho)).click()
+
+    sc.logger.info('点击“确认”')
+    WebDriverWait(sc.driver, 10, 1).until(
+        lambda x: x.find_element_by_name(iOS_elements.el_confirm_btn)).click()
 
     try:
         sc.logger.info('点击“确认”')
@@ -575,7 +668,7 @@ def clip_fun_loop():
     el_t = sc.driver.find_element_by_name("转场")
     coord_x = el_t.location.get('x')
     coord_y = el_t.location.get('y')
-    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.7, 600)
+    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.5, 600)
 
     sc.logger.info('剪辑-镜头编辑-图片动画')
     if video_flag == 0:
@@ -688,6 +781,7 @@ def clip_reverse():
             lambda x: x.find_element_by_name("镜头倒放"))
     except TimeoutException:
         sc.logger.error('倒放镜头超时，继续等待10s')
+        time.sleep(10)
 
 def clip_transition():
     '''转场'''
@@ -724,7 +818,7 @@ def clip_mult_select():
     el_t = sc.driver.find_element_by_name("转场")
     coord_x = el_t.location.get('x')
     coord_y = el_t.location.get('y')
-    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.7, 600)
+    sc.swipe_by_ratio(coord_x, coord_y, 'left', 0.5, 600)
 
     sc.logger.info('删除镜头')
     WebDriverWait(sc.driver, 5, 1).until(
@@ -877,7 +971,7 @@ def text_comm_add():
     sc.logger.info('输入字幕')
     el_text_input = sc.driver.find_element_by_ios_predicate(iOS_elements.text_input_label1)
     el_text_input.clear()
-    el_text_input.send_keys("input comm text test")
+    el_text_input.send_keys("input text test")
 
     sc.logger.info('点击右侧"确认"按钮')
     sc.driver.find_element_by_name("确认").click()
@@ -891,7 +985,7 @@ def text_other():
     sc.logger.info('点击"下载"按钮')
     try:
         WebDriverWait(sc.driver, 5, 1).until(
-            lambda x: x.find_element_by_accessibility_id(iOS_elements.btn_font_download)).click()
+            lambda x: x.find_element_by_xpath(iOS_elements.btn_font_download)).click()
     except TimeoutException:
         sc.logger.info('当前页面已无为下载字体')
 
@@ -973,7 +1067,7 @@ def fx_add():
     '''特效'''
     el_more = 'xiaoying itembar down more'
     try:
-        WebDriverWait(sc.driver, 3, 1).until(
+        WebDriverWait(sc.driver, 5, 1).until(
             lambda x: x.find_element_by_name(el_more))
     except TimeoutException:
         sc.logger.info('当前位置已添加过"特效"')
@@ -1001,16 +1095,29 @@ def fx_add():
 
 def sound_rec_add():
     '''配音和音效-录音'''
-    sc.logger.info('点击"录制"')
-    WebDriverWait(sc.driver, 5, 1).until(
-        lambda x: x.find_element_by_accessibility_id(iOS_elements.btn_rec_start)).click()
 
-    sc.logger.info('录制3s后停止')
-    time.sleep(3)
+    sc.logger.info('删除已添加的配音或音效')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_accessibility_id(iOS_elements.btn_rec_start))
+    except TimeoutException:
+        sc.logger.info('当前位置已添加配音或音效，删除后录制')
+        sc.driver.find_element_by_name('删除').click()
+
+        sc.logger.info('点击"录制"')
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_accessibility_id(iOS_elements.btn_rec_start)).click()
+
+    sc.logger.info('录制5s后停止')
+    time.sleep(5)
 
     sc.logger.info('停止"录制"')
-    WebDriverWait(sc.driver, 5, 1).until(
-        lambda x: x.find_element_by_accessibility_id(iOS_elements.btn_rec_stop)).click()
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_accessibility_id(iOS_elements.btn_rec_stop)).click()
+    except TimeoutException:
+        sc.logger.info('时长不够，无法添加')
+        return True
 
 def sound_audio_add():
     '''配音和音效-音效'''
@@ -1074,6 +1181,12 @@ def export_video(format):
     try:
         WebDriverWait(sc.driver, 3, 1).until(
             lambda x: x.find_element_by_name('顺便看看使用教程'))
+
+        try:
+            WebDriverWait(sc.driver, 3000, 1).until(
+                lambda x: x.find_element_by_name('首页')).click()
+        except TimeoutException:
+            sc.logger.error('导出超时')
     except TimeoutException:
         sc.logger.info('不支持 %s 导出，请购买会员后再进行相关操作', format)
         try:
@@ -1081,15 +1194,9 @@ def export_video(format):
         except NoSuchElementException:
             sc.driver.find_element_by_name(iOS_elements.el_try_close).click()
 
-        sc.logger.info('返回创作页')
+        sc.logger.info('返回首页')
         back_to_home()
         return True
-
-    try:
-        WebDriverWait(sc.driver, 120, 1).until(
-            lambda x: x.find_element_by_name('更多草稿'))
-    except TimeoutException:
-        sc.logger.error('导出超时')
 
 def export_gif(ratio,bitrate):
     '''
@@ -1140,7 +1247,8 @@ def export_gif(ratio,bitrate):
 def publish_input():
     '''发布-输入相关'''
     sc.logger.info('清空标题')
-    el_title_clear = sc.driver.find_element_by_xpath("//*/XCUIElementTypeScrollView/XCUIElementTypeTextView")
+    el_title_clear = sc.driver.find_element_by_xpath(
+        "//*/XCUIElementTypeOther/XCUIElementTypeOther[1]/XCUIElementTypeTextView")
     el_title_clear.clear()
 
     sc.logger.info('输入标题')
@@ -1149,11 +1257,10 @@ def publish_input():
     el_title.clear()
     el_title.send_keys('input video title test')
 
-    sc.logger.info('输入描述')
-    el_des = WebDriverWait(sc.driver, 5, 1).until(
-        lambda x: x.find_element_by_xpath(iOS_elements.des_label))
+    sc.logger.info('清空&输入描述')
+    el_des = sc.driver.find_element_by_xpath(iOS_elements.des_label)
     el_des.clear()
-    el_des.send_keys("input description text")
+    el_des.send_keys("input description test")
 
     sc.logger.info('保存输入的描述')
     try:
@@ -1182,8 +1289,8 @@ def publish_privacy():
 
 def publish_cover_add():
     '''发布-封面设置'''
-    sc.logger.info('点击"更换封面"')
-    sc.driver.find_element_by_name("更换封面").click()
+    sc.logger.info('点击"修改封面"')
+    sc.driver.find_element_by_name("修改封面").click()
 
     sc.logger.info('点击"动画贴纸"图标')
     WebDriverWait(sc.driver, 5, 1).until(
@@ -1202,7 +1309,7 @@ def publish_cover_add():
 
     sc.logger.info('添加一个普通字幕')
     WebDriverWait(sc.driver, 5, 1).until(
-        lambda x: x.find_element_by_xpath(iOS_elements.btn_text_cho)).click()
+        lambda x: x.find_element_by_xpath(iOS_elements.btn_cover_cho)).click()
 
     sc.logger.info('点击"字体"按钮')
     sc.driver.find_element_by_name("字体").click()
@@ -1315,3 +1422,80 @@ def feedback():
 
 
 
+def loop_add_music():
+    '''多段配乐-循环添加'''
+    sc.logger.info('点击"添加"')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name('添加')).click()
+    except TimeoutException:
+        sc.logger.info('当前视频已经有配乐，删除原有音乐')
+        sc.driver.find_element_by_name('删除').click()
+
+        sc.logger.info('点击"添加"')
+        sc.driver.find_element_by_name('添加').click()
+
+    sc.logger.info('添加配乐')
+    music_add()
+
+    sc.logger.info('添加3s的效果')
+    time.sleep(3)
+
+    sc.logger.info('点击"完成"')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name('完成')).click()
+    except TimeoutException:
+        sc.logger.info('直接点击右下角确认按钮即可')
+
+def loop_add_text():
+    '''添加多个字幕'''
+    try:
+        sc.logger.info('确定')
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name(iOS_elements.el_confirm_btn)).click()
+    except TimeoutException:
+        sc.logger.info('直接点击完成即可')
+
+    sc.logger.info('添加3s的效果')
+    time.sleep(3)
+
+    sc.logger.info('点击"完成"')
+    WebDriverWait(sc.driver, 5, 1).until(
+        lambda x: x.find_element_by_name('完成')).click()
+
+    sc.logger.info('点击"添加"')
+    sc.driver.find_element_by_name('添加').click()
+
+def loop_add_comm_text():
+    '''效果-普通字幕添加'''
+    sc.logger.info('切换到普通字幕')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_xpath(iOS_elements.btn_text_comm)).click()
+    except TimeoutException:
+        sc.logger.info('当前已经是普通字幕页面')
+
+    sc.logger.info('选择一个普通字幕')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_xpath(iOS_elements.btn_text_cho)).click()
+    except TimeoutException:
+        sc.logger.info('已经选择了普通字幕')
+
+    sc.logger.info('确定')
+    WebDriverWait(sc.driver, 5, 1).until(
+        lambda x: x.find_element_by_name(iOS_elements.el_confirm_btn)).click()
+
+    sc.logger.info('添加3s的效果')
+    time.sleep(3)
+
+    sc.logger.info('点击"完成"')
+    try:
+        WebDriverWait(sc.driver, 5, 1).until(
+            lambda x: x.find_element_by_name('完成')).click()
+    except TimeoutException:
+        sc.logger.info('直接点击右下角确认按钮即可')
+
+    sc.logger.info('点击"添加"')
+    sc.driver.find_element_by_name('添加').click()
